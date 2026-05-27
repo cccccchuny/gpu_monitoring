@@ -2,7 +2,8 @@
 
 > **대상 독자**: 현장 방문 설치 엔지니어  
 > **설치 환경**: Airgap GPU 서버 (인터넷 차단, Docker 설치 완료)  
-> **소요 시간**: 약 30~60분
+> **소요 시간**: 약 30~60분  
+> **최종 수정**: 중지 스크립트(stop.sh) 및 운영 가이드 추가
 
 ---
 
@@ -38,7 +39,8 @@ gpu_monitoring/
 │       ├── 02-host-resources.json
 │       └── 03-gpu-resources.json
 └── scripts/
-    └── deploy.sh                  ← 자동 배포 스크립트
+    ├── deploy.sh                  ← 스택 구동 스크립트
+    └── stop.sh                    ← 스택 중지 스크립트
 ```
 
 ---
@@ -436,26 +438,73 @@ docker compose --env-file .env restart grafana
 
 ## 📌 설치 후 운영 참고
 
-### 서비스 관리 명령어
+### 스크립트 요약
+
+| 스크립트 | 용도 | 실행 위치 |
+|---|---|---|
+| `scripts/deploy.sh` | 스택 구동 (이미지 로드 → 컨테이너 시작 → 검증) | GPU 서버 |
+| `scripts/stop.sh` | 스택 중지 (3가지 모드) | GPU 서버 |
+| `scripts/save-images.sh` | Docker 이미지 tar 저장 | 준비 서버 |
+
+---
+
+### 🛑 스택 중지 (`stop.sh`)
 
 ```bash
-# 스택 시작
-cd /opt/gpu_monitoring/compose   # 설치 경로에 맞게 변경
-docker compose --env-file .env up -d
+cd /opt/gpu_monitoring   # 설치 경로에 맞게 변경
 
-# 스택 중지
-docker compose --env-file .env down
+# ── 모드 1: 컨테이너만 중지 (수집 데이터 보존) ────────────
+# 재시작 시 기존 데이터 그대로 이어짐
+bash scripts/stop.sh
+
+# ── 모드 2: 컨테이너 + 볼륨(수집 데이터) 삭제 ─────────────
+# Prometheus 데이터, Grafana 설정 모두 초기화됨
+bash scripts/stop.sh --purge
+
+# ── 모드 3: 컨테이너 + 볼륨 + 이미지 전부 삭제 ────────────
+# 완전 초기화 (재설치 시 docker load 다시 필요)
+bash scripts/stop.sh --purge-all
+
+# ── 현재 상태만 확인 ──────────────────────────────────────
+bash scripts/stop.sh --status
+```
+
+> ⚠️ **일반 운영 중 중지는 모드 1(`stop.sh` 인수 없음)을 사용하세요.**  
+> `--purge` / `--purge-all` 은 데이터가 영구 삭제됩니다.
+
+---
+
+### ▶️ 스택 재시작 (`deploy.sh`)
+
+```bash
+# 중지 후 재시작 (이미지 재로드 없이 빠르게)
+bash scripts/deploy.sh --up-only
+
+# 전체 절차 재실행 (이미지 로드 → 구동 → 검증)
+bash scripts/deploy.sh
+```
+
+---
+
+### 서비스 개별 관리
+
+```bash
+cd /opt/gpu_monitoring/compose
 
 # 특정 컨테이너만 재시작
 docker compose --env-file .env restart grafana
+docker compose --env-file .env restart prometheus
 
-# 로그 확인
-docker compose logs -f prometheus
+# 실시간 로그 확인
 docker compose logs -f grafana
+docker compose logs -f prometheus
+docker compose logs -f dcgm-exporter
 
-# 전체 상태
+# 전체 상태 확인
 docker compose ps
 ```
+
+---
 
 ### 서버 재부팅 시
 
@@ -467,6 +516,8 @@ Docker 자동 시작 설정 확인:
 systemctl is-enabled docker
 # 결과가 'enabled'이면 정상
 ```
+
+---
 
 ### 데이터 보존
 
