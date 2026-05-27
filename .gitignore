@@ -1,0 +1,13 @@
+# Docker 이미지 tar 파일 — 수백 MB 바이너리, git에 포함하지 않음
+# save-images.sh 실행으로 현장에서 생성
+images/*.tar
+images/*.tar.gz
+
+# OS / Editor
+.DS_Store
+*.swp
+*.swo
+*~
+
+# 번들 파일
+*.tar.gz

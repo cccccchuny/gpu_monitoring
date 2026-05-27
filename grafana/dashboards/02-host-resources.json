@@ -1,0 +1,517 @@
+{
+  "__inputs": [],
+  "__requires": [
+    { "type": "grafana", "id": "grafana", "name": "Grafana", "version": "9.0.0" },
+    { "type": "datasource", "id": "prometheus", "name": "Prometheus", "version": "1.0.0" }
+  ],
+  "annotations": { "list": [] },
+  "description": "GPU 서버 호스트 리소스 — CPU / Memory / Disk / Network",
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [
+    { "title": "컨테이너 목록", "url": "/d/container-list", "type": "link", "icon": "external link" },
+    { "title": "GPU 리소스",    "url": "/d/gpu-resources",  "type": "link", "icon": "external link" }
+  ],
+  "panels": [
+
+    "row_cpu": {
+    },
+
+    {
+      "id": 1,
+      "type": "gauge",
+      "title": "CPU 사용률",
+      "gridPos": { "h": 5, "w": 4, "x": 0, "y": 0 },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "orientation": "auto",
+        "showThresholdLabels": false,
+        "showThresholdMarkers": true
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "max": 100,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green",  "value": null },
+              { "color": "yellow", "value": 70 },
+              { "color": "red",    "value": 90 }
+            ]
+          }
+        }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "expr": "100 - (avg(rate(node_cpu_seconds_total{mode=\"idle\"}[2m])) * 100)",
+          "instant": true,
+          "legendFormat": "CPU %"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "CPU 코어 수",
+      "gridPos": { "h": 2, "w": 2, "x": 4, "y": 0 },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "graphMode": "none" },
+      "fieldConfig": { "defaults": { "unit": "short" } },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "expr": "count(count by (cpu) (node_cpu_seconds_total))",
+          "instant": true
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Load Average (1m / 5m / 15m)",
+      "gridPos": { "h": 2, "w": 4, "x": 6, "y": 0 },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "graphMode": "area",
+        "colorMode": "background",
+        "textMode": "value_and_name",
+        "orientation": "horizontal"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": { "mode": "absolute", "steps": [
+            { "color": "green",  "value": null },
+            { "color": "yellow", "value": 4 },
+            { "color": "red",    "value": 8 }
+          ]},
+          "unit": "short"
+        }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "expr": "node_load1",  "instant": true, "legendFormat": "1m"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "expr": "node_load5",  "instant": true, "legendFormat": "5m"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "expr": "node_load15", "instant": true, "legendFormat": "15m"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "timeseries",
+      "title": "CPU 사용률 추이 (%)",
+      "gridPos": { "h": 8, "w": 14, "x": 10, "y": 0 },
+      "options": {
+        "tooltip": { "mode": "multi", "sort": "desc" },
+        "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["mean", "max", "lastNotNull"] }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent", "min": 0, "max": 100,
+          "custom": { "lineWidth": 2, "fillOpacity": 15, "gradientMode": "opacity" },
+          "color": { "mode": "palette-classic" }
+        }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "expr": "100 - (avg(rate(node_cpu_seconds_total{mode=\"idle\"}[2m])) * 100)",
+          "legendFormat": "CPU 전체"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "expr": "avg(rate(node_cpu_seconds_total{mode=\"user\"}[2m])) * 100",
+          "legendFormat": "user"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "expr": "avg(rate(node_cpu_seconds_total{mode=\"system\"}[2m])) * 100",
+          "legendFormat": "system"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "expr": "avg(rate(node_cpu_seconds_total{mode=\"iowait\"}[2m])) * 100",
+          "legendFormat": "iowait"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "Load Average 추이",
+      "gridPos": { "h": 3, "w": 10, "x": 0, "y": 5 },
+      "options": {
+        "tooltip": { "mode": "multi" },
+        "legend": { "displayMode": "list", "placement": "bottom" }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short", "min": 0,
+          "custom": { "lineWidth": 2, "fillOpacity": 10 }
+        }
+      },
+      "targets": [
+        { "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" }, "expr": "node_load1",  "legendFormat": "1분" },
+        { "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" }, "expr": "node_load5",  "legendFormat": "5분" },
+        { "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" }, "expr": "node_load15", "legendFormat": "15분" }
+      ]
+    },
+
+    {
+      "id": 100,
+      "type": "row",
+      "title": "Memory",
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 8 }
+    },
+    {
+      "id": 11,
+      "type": "gauge",
+      "title": "메모리 사용률",
+      "gridPos": { "h": 5, "w": 4, "x": 0, "y": 9 },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "showThresholdMarkers": true
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent", "min": 0, "max": 100,
+          "thresholds": { "mode": "absolute", "steps": [
+            { "color": "green",  "value": null },
+            { "color": "yellow", "value": 70 },
+            { "color": "red",    "value": 90 }
+          ]}
+        }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "expr": "(1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100",
+          "instant": true
+        }
+      ]
+    },
+    {
+      "id": 12,
+      "type": "stat",
+      "title": "메모리 상세",
+      "gridPos": { "h": 5, "w": 6, "x": 4, "y": 9 },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "graphMode": "none",
+        "textMode": "value_and_name",
+        "orientation": "horizontal",
+        "colorMode": "value"
+      },
+      "fieldConfig": {
+        "defaults": { "unit": "bytes", "color": { "mode": "fixed", "fixedColor": "blue" } }
+      },
+      "targets": [
+        { "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" }, "expr": "node_memory_MemTotal_bytes",     "instant": true, "legendFormat": "Total" },
+        { "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" }, "expr": "node_memory_MemAvailable_bytes", "instant": true, "legendFormat": "Available" },
+        { "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" }, "expr": "node_memory_Cached_bytes",       "instant": true, "legendFormat": "Cached" },
+        { "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" }, "expr": "node_memory_Buffers_bytes",      "instant": true, "legendFormat": "Buffers" }
+      ]
+    },
+    {
+      "id": 13,
+      "type": "timeseries",
+      "title": "메모리 사용량 추이",
+      "gridPos": { "h": 8, "w": 14, "x": 10, "y": 9 },
+      "options": {
+        "tooltip": { "mode": "multi" },
+        "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["mean", "max", "lastNotNull"] }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes", "min": 0,
+          "custom": { "lineWidth": 2, "fillOpacity": 20, "stacking": { "mode": "none" } },
+          "color": { "mode": "palette-classic" }
+        }
+      },
+      "targets": [
+        { "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" }, "expr": "node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes", "legendFormat": "사용 중" },
+        { "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" }, "expr": "node_memory_Cached_bytes",   "legendFormat": "Cached" },
+        { "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" }, "expr": "node_memory_Buffers_bytes",  "legendFormat": "Buffers" },
+        { "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" }, "expr": "node_memory_MemFree_bytes",  "legendFormat": "Free" }
+      ]
+    },
+    {
+      "id": 14,
+      "type": "timeseries",
+      "title": "Swap 사용량",
+      "gridPos": { "h": 3, "w": 10, "x": 0, "y": 14 },
+      "options": { "legend": { "displayMode": "list" } },
+      "fieldConfig": { "defaults": { "unit": "bytes", "min": 0, "custom": { "lineWidth": 1, "fillOpacity": 10 } } },
+      "targets": [
+        { "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" }, "expr": "node_memory_SwapTotal_bytes - node_memory_SwapFree_bytes", "legendFormat": "Swap 사용" },
+        { "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" }, "expr": "node_memory_SwapTotal_bytes", "legendFormat": "Swap 전체" }
+      ]
+    },
+
+    {
+      "id": 101,
+      "type": "row",
+      "title": "Disk",
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 17 }
+    },
+    {
+      "id": 20,
+      "type": "bargauge",
+      "title": "디스크 사용률 (파티션별) — 위협 경로 집중 확인",
+      "description": "상단 변수 'disk_mountpoint'에서 모니터링할 파티션을 선택하세요. GPU 서버의 위험 파티션(/, /data, /var/lib/docker 등)을 추가하세요.",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 18 },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "orientation": "horizontal",
+        "displayMode": "gradient",
+        "showUnfilled": true,
+        "minVizWidth": 0,
+        "minVizHeight": 10
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "max": 100,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green",  "value": null },
+              { "color": "yellow", "value": 70 },
+              { "color": "orange", "value": 85 },
+              { "color": "red",    "value": 95 }
+            ]
+          },
+          "custom": { "thresholdsStyle": { "mode": "area" } }
+        }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "expr": "(node_filesystem_size_bytes{mountpoint=~\"$disk_mountpoint\", fstype!~\"tmpfs|overlay\"} - node_filesystem_avail_bytes{mountpoint=~\"$disk_mountpoint\", fstype!~\"tmpfs|overlay\"}) / node_filesystem_size_bytes{mountpoint=~\"$disk_mountpoint\", fstype!~\"tmpfs|overlay\"} * 100",
+          "instant": true,
+          "legendFormat": "{{mountpoint}}"
+        }
+      ]
+    },
+    {
+      "id": 21,
+      "type": "table",
+      "title": "디스크 용량 상세",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 18 },
+      "options": { "showHeader": true },
+      "fieldConfig": {
+        "defaults": { "custom": { "align": "auto" } },
+        "overrides": [
+          { "matcher": { "id": "byName", "options": "전체"    }, "properties": [{ "id": "unit", "value": "bytes" }] },
+          { "matcher": { "id": "byName", "options": "사용"    }, "properties": [{ "id": "unit", "value": "bytes" }] },
+          { "matcher": { "id": "byName", "options": "여유"    }, "properties": [{ "id": "unit", "value": "bytes" }] },
+          { "matcher": { "id": "byName", "options": "사용률"  }, "properties": [
+            { "id": "unit", "value": "percent" },
+            { "id": "custom.displayMode", "value": "color-background" },
+            { "id": "thresholds", "value": { "mode": "absolute", "steps": [
+              { "color": "green",  "value": null },
+              { "color": "yellow", "value": 70 },
+              { "color": "orange", "value": 85 },
+              { "color": "red",    "value": 95 }
+            ]}}
+          ]}
+        ]
+      },
+      "transformations": [
+        { "id": "merge", "options": {} },
+        {
+          "id": "organize",
+          "options": {
+            "renameByName": {
+              "mountpoint": "마운트 경로",
+              "fstype": "파일시스템",
+              "Value #A": "전체",
+              "Value #B": "사용",
+              "Value #C": "여유",
+              "Value #D": "사용률"
+            },
+            "excludeByName": { "Time": true, "job": true, "instance": true, "device": true }
+          }
+        }
+      ],
+      "targets": [
+        { "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" }, "expr": "node_filesystem_size_bytes{mountpoint=~\"$disk_mountpoint\", fstype!~\"tmpfs|overlay\"}", "instant": true, "legendFormat": "{{mountpoint}}", "refId": "A" },
+        { "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" }, "expr": "node_filesystem_size_bytes{mountpoint=~\"$disk_mountpoint\", fstype!~\"tmpfs|overlay\"} - node_filesystem_avail_bytes{mountpoint=~\"$disk_mountpoint\", fstype!~\"tmpfs|overlay\"}", "instant": true, "legendFormat": "{{mountpoint}}", "refId": "B" },
+        { "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" }, "expr": "node_filesystem_avail_bytes{mountpoint=~\"$disk_mountpoint\", fstype!~\"tmpfs|overlay\"}", "instant": true, "legendFormat": "{{mountpoint}}", "refId": "C" },
+        { "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" }, "expr": "(node_filesystem_size_bytes{mountpoint=~\"$disk_mountpoint\", fstype!~\"tmpfs|overlay\"} - node_filesystem_avail_bytes{mountpoint=~\"$disk_mountpoint\", fstype!~\"tmpfs|overlay\"}) / node_filesystem_size_bytes{mountpoint=~\"$disk_mountpoint\", fstype!~\"tmpfs|overlay\"} * 100", "instant": true, "legendFormat": "{{mountpoint}}", "refId": "D" }
+      ]
+    },
+    {
+      "id": 22,
+      "type": "timeseries",
+      "title": "디스크 I/O (읽기/쓰기 처리량)",
+      "gridPos": { "h": 7, "w": 12, "x": 0, "y": 26 },
+      "options": { "tooltip": { "mode": "multi" }, "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["mean", "max"] } },
+      "fieldConfig": {
+        "defaults": { "unit": "Bps", "custom": { "lineWidth": 2, "fillOpacity": 10 } }
+      },
+      "targets": [
+        { "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" }, "expr": "rate(node_disk_read_bytes_total{device=~\"$disk_device\"}[2m])",    "legendFormat": "{{device}} 읽기" },
+        { "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" }, "expr": "rate(node_disk_written_bytes_total{device=~\"$disk_device\"}[2m])", "legendFormat": "{{device}} 쓰기" }
+      ]
+    },
+    {
+      "id": 23,
+      "type": "timeseries",
+      "title": "디스크 IOPS",
+      "gridPos": { "h": 7, "w": 12, "x": 12, "y": 26 },
+      "options": { "tooltip": { "mode": "multi" }, "legend": { "displayMode": "list", "placement": "bottom" } },
+      "fieldConfig": {
+        "defaults": { "unit": "iops", "custom": { "lineWidth": 2, "fillOpacity": 10 } }
+      },
+      "targets": [
+        { "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" }, "expr": "rate(node_disk_reads_completed_total{device=~\"$disk_device\"}[2m])",    "legendFormat": "{{device}} 읽기" },
+        { "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" }, "expr": "rate(node_disk_writes_completed_total{device=~\"$disk_device\"}[2m])", "legendFormat": "{{device}} 쓰기" }
+      ]
+    },
+
+    {
+      "id": 102,
+      "type": "row",
+      "title": "Network",
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 33 }
+    },
+    {
+      "id": 30,
+      "type": "timeseries",
+      "title": "네트워크 수신 처리량 (bytes/s)",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 34 },
+      "options": { "tooltip": { "mode": "multi" }, "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["mean", "max", "lastNotNull"] } },
+      "fieldConfig": {
+        "defaults": { "unit": "Bps", "min": 0, "custom": { "lineWidth": 2, "fillOpacity": 15 }, "color": { "mode": "palette-classic" } }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "expr": "rate(node_network_receive_bytes_total{device=~\"$network_interface\"}[2m])",
+          "legendFormat": "{{device}} RX"
+        }
+      ]
+    },
+    {
+      "id": 31,
+      "type": "timeseries",
+      "title": "네트워크 송신 처리량 (bytes/s)",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 34 },
+      "options": { "tooltip": { "mode": "multi" }, "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["mean", "max", "lastNotNull"] } },
+      "fieldConfig": {
+        "defaults": { "unit": "Bps", "min": 0, "custom": { "lineWidth": 2, "fillOpacity": 15 }, "color": { "mode": "palette-classic" } }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "expr": "rate(node_network_transmit_bytes_total{device=~\"$network_interface\"}[2m])",
+          "legendFormat": "{{device}} TX"
+        }
+      ]
+    },
+    {
+      "id": 32,
+      "type": "timeseries",
+      "title": "네트워크 오류 / 패킷 드롭",
+      "gridPos": { "h": 5, "w": 12, "x": 0, "y": 42 },
+      "options": { "legend": { "displayMode": "list" } },
+      "fieldConfig": {
+        "defaults": { "unit": "short", "custom": { "lineWidth": 1, "fillOpacity": 5 } }
+      },
+      "targets": [
+        { "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" }, "expr": "rate(node_network_receive_errs_total{device=~\"$network_interface\"}[2m])",  "legendFormat": "{{device}} RX 오류" },
+        { "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" }, "expr": "rate(node_network_transmit_errs_total{device=~\"$network_interface\"}[2m])", "legendFormat": "{{device}} TX 오류" },
+        { "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" }, "expr": "rate(node_network_receive_drop_total{device=~\"$network_interface\"}[2m])",  "legendFormat": "{{device}} RX 드롭" },
+        { "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" }, "expr": "rate(node_network_transmit_drop_total{device=~\"$network_interface\"}[2m])", "legendFormat": "{{device}} TX 드롭" }
+      ]
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 38,
+  "tags": ["host", "system", "disk", "network"],
+  "templating": {
+    "list": [
+      {
+        "name": "DS_PROMETHEUS",
+        "type": "datasource",
+        "pluginId": "prometheus",
+        "hide": 2,
+        "current": { "text": "Prometheus", "value": "Prometheus" }
+      },
+      {
+        "name": "disk_mountpoint",
+        "label": "디스크 경로",
+        "type": "query",
+        "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+        "query": {
+          "query": "label_values(node_filesystem_size_bytes{fstype!~\"tmpfs|overlay|squashfs\"}, mountpoint)",
+          "refId": "StandardVariableQuery"
+        },
+        "multi": true,
+        "includeAll": true,
+        "allValue": ".+",
+        "current": {},
+        "refresh": 2,
+        "sort": 1,
+        "hide": 0,
+        "description": "모니터링할 파티션을 선택하세요. GPU 서버의 위협 파티션 경로를 선택하세요."
+      },
+      {
+        "name": "disk_device",
+        "label": "디스크 장치",
+        "type": "query",
+        "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+        "query": {
+          "query": "label_values(node_disk_read_bytes_total, device)",
+          "refId": "StandardVariableQuery"
+        },
+        "multi": true,
+        "includeAll": true,
+        "allValue": ".+",
+        "current": {},
+        "refresh": 2,
+        "sort": 1,
+        "hide": 0
+      },
+      {
+        "name": "network_interface",
+        "label": "네트워크 인터페이스",
+        "type": "query",
+        "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+        "query": {
+          "query": "label_values(node_network_receive_bytes_total{device!~\"lo|veth.*|docker.*|br-.*\"}, device)",
+          "refId": "StandardVariableQuery"
+        },
+        "multi": true,
+        "includeAll": true,
+        "allValue": ".+",
+        "current": {},
+        "refresh": 2,
+        "sort": 1,
+        "hide": 0
+      }
+    ]
+  },
+  "time": { "from": "now-1h", "to": "now" },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "② 서버 리소스",
+  "uid": "host-resources",
+  "version": 1
+}
