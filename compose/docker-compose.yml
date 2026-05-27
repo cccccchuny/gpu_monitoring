@@ -1,8 +1,7 @@
-version: '3.8'
-
 # ════════════════════════════════════════════════════════════
 #  GPU 서버 모니터링 스택
-#  구동: docker compose --env-file .env up -d
+#  기본 구동 (GPU 없는 서버): docker compose --env-file .env up -d
+#  GPU 포함 구동 (GPU 서버):  docker compose --env-file .env --profile gpu up -d
 # ════════════════════════════════════════════════════════════
 
 networks:
@@ -125,9 +124,11 @@ services:
   # ── DCGM Exporter ──────────────────────────────────────────
   # NVIDIA GPU: 온도 / VRAM / 사용률 / 전력 / 클럭
   # 사전 조건: nvidia-container-toolkit 설치 필요
+  # profiles: [gpu] → --profile gpu 옵션 시에만 구동
   dcgm-exporter:
     image: nvcr.io/nvidia/k8s/dcgm-exporter:latest
     container_name: dcgm-exporter
+    profiles: ["gpu"]
     restart: unless-stopped
     ports:
       - "${DCGM_EXPORTER_PORT:-9400}:9400"

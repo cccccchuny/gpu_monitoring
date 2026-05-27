@@ -22,6 +22,11 @@ ok()   { echo "  ✅ $*"; }
 warn() { echo "  ⚠️  $*"; }
 info() { echo "  ℹ️  $*"; }
 
+GPU_PROFILE=""
+if command -v nvidia-smi &>/dev/null && nvidia-smi &>/dev/null 2>&1; then
+  GPU_PROFILE="--profile gpu"
+fi
+
 # ── 현재 상태 출력 ──────────────────────────────────────────
 show_status() {
   print_section "현재 컨테이너 상태"
@@ -37,16 +42,18 @@ do_stop() {
   print_section "모니터링 스택 중지"
   cd "$COMPOSE_DIR"
 
-  running=$(docker compose ps --services --filter status=running 2>/dev/null | wc -l)
-  if [ "$running" -eq 0 ]; then
+  # --filter 결과가 빈 줄을 포함할 수 있어 wc -l 대신 문자열 비교로 판별
+  running_list=$(docker compose ps --services --filter status=running 2>/dev/null | grep -v '^$' || true)
+  if [ -z "$running_list" ]; then
     info "이미 중지된 상태입니다."
     return
   fi
 
   echo "  중지 대상 컨테이너:"
-  docker compose ps --services --filter status=running 2>/dev/null | sed 's/^/    - /'
+  echo "$running_list" | sed 's/^/    - /'
 
-  docker compose --env-file .env down
+  # shellcheck disable=SC2086
+  docker compose --env-file .env $GPU_PROFILE down
   ok "모든 컨테이너 중지 완료"
   info "수집 데이터(볼륨)는 보존됩니다. 재시작하면 이어서 사용 가능합니다."
   info "재시작: bash scripts/deploy.sh --up-only"
@@ -60,7 +67,8 @@ do_purge() {
   echo ""
 
   cd "$COMPOSE_DIR"
-  docker compose --env-file .env down --volumes --remove-orphans
+  # shellcheck disable=SC2086
+  docker compose --env-file .env $GPU_PROFILE down --volumes --remove-orphans
   ok "컨테이너 및 볼륨 삭제 완료"
 }
 
@@ -73,7 +81,8 @@ do_purge_all() {
 
   cd "$COMPOSE_DIR"
   source .env 2>/dev/null || true
-  docker compose --env-file .env down --volumes --remove-orphans --rmi all 2>/dev/null || true
+  # shellcheck disable=SC2086
+  docker compose --env-file .env $GPU_PROFILE down --volumes --remove-orphans --rmi all 2>/dev/null || true
   ok "컨테이너, 볼륨, 이미지 삭제 완료"
 }
 
