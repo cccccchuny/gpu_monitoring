@@ -33,11 +33,16 @@ scrape_configs:
           instance: "gpu-server"
     # 불필요한 cAdvisor 고카디날리티 메트릭 제거
     metric_relabel_configs:
+      # 노이즈 메트릭 드롭
       - source_labels: [__name__]
         regex: 'container_(network_tcp_usage_total|tasks_state|cpu_load_average_10s|memory_failures_total)'
         action: drop
-      - source_labels: [container_label_com_docker_compose_project]
-        action: drop
+      # Docker Compose 내부 라벨은 메트릭에서 제거 (cardinality 감소)
+      # action: labeldrop → 메트릭 자체는 보존하고 라벨만 제거
+      - regex: 'container_label_com_docker_compose_.*'
+        action: labeldrop
+      - regex: 'container_label_org_opencontainers_.*'
+        action: labeldrop
 
   # ── DCGM Exporter (NVIDIA GPU) ────────────────────────────
   - job_name: "dcgm-exporter"
